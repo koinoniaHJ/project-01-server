@@ -3,12 +3,19 @@ package com.erp.server.common.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 
+import com.erp.server.common.security.AppUserDetailsService;
 import com.erp.server.common.security.RestAccessDeniedHandler;
 import com.erp.server.common.security.RestAuthenticationEntryPoint;
 
@@ -36,7 +43,8 @@ public class SecurityConfig {
 	public SecurityFilterChain securityFilterChain(
 			HttpSecurity http,
 			RestAuthenticationEntryPoint restAuthenticationEntryPoint, 
-			RestAccessDeniedHandler restAccessDeniedHandler) throws Exception {
+			RestAccessDeniedHandler restAccessDeniedHandler,
+			CsrfTokenRepository csrfTokenRepository) throws Exception {
 
 		/*
 		 * authorizeHttpRequests: HTTP 요청별 접근 권한을 설정한다.
@@ -46,8 +54,16 @@ public class SecurityConfig {
 		http	// /api/** 요청에만 이 SecurityFilterChain을 적용한다.
 				.securityMatcher("/api/**") 
 		
-				// 모든 API 요청은 인증된 사용자만 접근할 수 있다.
-				.authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+				.authorizeHttpRequests(authorize -> authorize
+
+						// 로그인 전 CSRF 토큰 발급과 로그인 API는 비로그인 사용자도 접근할 수 있다.
+		                .requestMatchers(
+		                        "/api/v1/auth/csrf",
+		                        "/api/v1/auth/login"
+		                ).permitAll()
+
+				        // 그 외 API는 로그인된 사용자만 접근할 수 있다.
+				        .anyRequest().authenticated())
 				
 				// httpBasic.disable(): 매 요청마다 아이디와 비밀번호를 전달하는 HTTP Basic 인증은 사용하지 않고, 로그인 후 생성된 세션을 이용하는 세션 기반 인증을 사용한다.
 				.httpBasic(httpBasic -> httpBasic.disable()) // HTTP Basic 인증은 사용하지 않는다.
@@ -59,7 +75,8 @@ public class SecurityConfig {
 	            .requestCache(requestCache -> requestCache.disable())
 
 				// CSRF 보호 기능을 활성화한다. POST, PUT, PATCH, DELETE 등 상태를 변경하는 요청에서는 올바른 CSRF 토큰인지 검증하게 된다.
-				.csrf(Customizer.withDefaults())
+	            .csrf(csrf ->
+                	csrf.csrfTokenRepository(csrfTokenRepository))
 
 				 // API의 401/403 오류는 직접 만든 Handler에서 공통 오류 응답으로 처리한다.
 				.exceptionHandling(exception -> exception
@@ -69,32 +86,31 @@ public class SecurityConfig {
 
 		return http.build(); // 위 보안 규칙으로 SecurityFilterChain을 생성하고, @Bean을 통해 Spring Bean으로 등록한다.
 	}
-	/*
-     * /api/** 이외의 요청에 적용되는 SecurityFilterChain
-     * 현재는 Smoke Test를 위해 Spring Security의 기본 Form Login(/login)을 사용한다.
-     */
+	
+     // 로그인 비밀번호의 해시 생성 및 검증에 사용할 PasswordEncoder를 등록하기 위한 메서드
     @Bean
-    public SecurityFilterChain formLoginSecurityFilterChain(HttpSecurity http)
-            throws Exception {
-
-        http
-            .authorizeHttpRequests(authorize -> authorize
-                .anyRequest().authenticated()
-            )
-
-            // Smoke Test용 기본 Form Login
-            .formLogin(Customizer.withDefaults())
-
-            .httpBasic(httpBasic -> httpBasic.disable())
-
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-            )
-
-            .csrf(Customizer.withDefaults());
-
-        return http.build();
+    public PasswordEncoder passwordEncoder() {
+        // APP_USER.password_hash에 저장할 비밀번호는 BCrypt 방식으로 처리한다.
+        return new BCryptPasswordEncoder();
     }
-	
-	
+    
+    // REST 로그인에서 AppUserDetailsService와 PasswordEncoder를 이용해 사용자 인증을 처리할 AuthenticationManager를 등록하기 위한 메서드
+    @Bean
+    public AuthenticationManager authenticationManager(AppUserDetailsService appUserDetailsService, PasswordEncoder passwordEncoder) {
+
+    	// 사용자 조회와 비밀번호 검증을 실제로 처리할 인증 객체
+        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider(appUserDetailsService);
+
+        authenticationProvider.setPasswordEncoder(passwordEncoder);
+
+        // DaoAuthenticationProvider를 이용해 인증을 처리하는 AuthenticationManager를 생성해 반환한다.
+        return new ProviderManager(authenticationProvider);
+    }
+    
+    // 현재 Session에 CSRF 토큰을 저장하고 조회하기 위한 CsrfTokenRepository를 등록하기 위한 메서드
+    @Bean
+    public CsrfTokenRepository csrfTokenRepository() {
+
+        return new HttpSessionCsrfTokenRepository();
+    }
 }

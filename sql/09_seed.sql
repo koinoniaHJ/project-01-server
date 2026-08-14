@@ -21,7 +21,7 @@ INSERT INTO APP_USER (
 ) VALUES (
     SEQ_APP_USER.NEXTVAL,
     'admin',
-    '$2y$10$d2jteULeX0DabILcAanWteTTX.6r5RUs7oNwU5Sr7WKHSqidmlIbK',
+    '$2y$10$d2jteULeX0DabILcAanWteTTX.6r5RUs7oNwU5Sr7WKHSqidmlIbK', --Admin1234!
     '관리자',
     'ADMIN',
     'ACTIVE',
