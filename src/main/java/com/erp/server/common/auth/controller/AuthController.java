@@ -3,6 +3,7 @@ package com.erp.server.common.auth.controller;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.erp.server.common.auth.dto.CsrfResponse;
 import com.erp.server.common.auth.dto.LoginRequest;
 import com.erp.server.common.auth.dto.LoginResponse;
+import com.erp.server.common.auth.dto.MeResponse;
 import com.erp.server.common.auth.service.AuthService;
 import com.erp.server.common.response.ApiResponse;
 import com.erp.server.common.security.AppUserDetails;
@@ -25,7 +27,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-// CSRF 토큰 발급과 로그인 REST API 요청을 받아 사용자 인증 및 로그인 Session 생성을 처리하기 위한 Controller 클래스
+// CSRF 토큰 발급과 로그인·로그아웃·현재 사용자 조회 REST API를 처리하기 위한 Controller 클래스
 @RestController // REST API 요청을 처리하고 반환값을 응답 본문(JSON 등)으로 전달하는 Controller로 지정
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -75,5 +77,31 @@ public class AuthController {
         AppUserDetails appUserDetails = (AppUserDetails) authentication.getPrincipal();
 
         return ApiResponse.success(LoginResponse.from(appUserDetails));
+    }
+    
+    // 현재 로그인 사용자의 기본 정보를 반환하기 위한 메서드
+    @GetMapping("/me")
+    public ApiResponse<MeResponse> me(Authentication authentication) {
+
+        // 현재 Session에 저장된 인증 정보에서 실제 로그인 사용자 정보를 가져온다.
+        AppUserDetails appUserDetails = (AppUserDetails) authentication.getPrincipal();
+
+        return ApiResponse.success(MeResponse.from(appUserDetails));
+    }
+    
+    // 로그아웃 시 현재 인증 정보와 HTTP Session을 정리하기 위해 사용한다.
+    private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
+
+    // 현재 로그인 Session과 인증 정보를 정리하여 로그아웃하기 위한 메서드
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse,
+            Authentication authentication) {
+
+        // 현재 HTTP Session을 무효화하고 Spring Security 인증 정보를 정리한다.
+        logoutHandler.logout(httpRequest, httpResponse, authentication);
+
+        return ApiResponse.success(null);
     }
 }

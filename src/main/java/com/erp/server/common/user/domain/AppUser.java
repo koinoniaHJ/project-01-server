@@ -98,7 +98,8 @@ public class AppUser {
         updatedAt = LocalDateTime.now();
     }
 
-    // username과 userName은 Lombok Getter 이름이 충돌할 수 있으므로 직접 작성한다.
+	// Lombok은 Getter 메서드 이름 충돌을 대소문자 구분 없이 확인하므로,
+	// username의 getUsername()과 userName의 getUserName()을 구분하지 못할 수 있어 직접 작성한다.
 
     // 로그인 아이디 반환
     public String getUsername() {

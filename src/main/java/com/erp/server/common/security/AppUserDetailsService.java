@@ -10,7 +10,7 @@ import com.erp.server.common.user.repository.AppUserRepository;
 
 import lombok.RequiredArgsConstructor;
 
-// 로그인 아이디로 APP_USER를 조회하여 Spring Security에 사용자 인증 정보를 제공하기 위한 Service 클래스
+// 로그인 아이디로 APP_USER를 조회하고, 조회 결과를 AppUserDetails로 만들어 Spring Security에 반환하는 사용자 조회 Service
 @Service		// 해당 클래스를 Service 계층의 Spring Bean으로 등록하는 annotation
 @RequiredArgsConstructor
 public class AppUserDetailsService implements UserDetailsService {

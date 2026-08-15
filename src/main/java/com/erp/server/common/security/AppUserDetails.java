@@ -15,7 +15,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 
-// AppUser의 사용자 정보를 Spring Security가 인증과 권한 검사에 사용할 수 있는 UserDetails 형태로 변환하기 위한 클래스
+// DB에서 조회한 AppUser의 사용자 정보를 Spring Security가 인증과 권한 검사에 사용할 수 있는 UserDetails 형태로 변환하여 보관하는 사용자 정보 객체
 @RequiredArgsConstructor	// Lombok이 final 필드를 매개변수로 받는 생성자를 자동으로 생성한다.
 public class AppUserDetails implements UserDetails {
 
@@ -58,6 +58,11 @@ public class AppUserDetails implements UserDetails {
         return userName;
     }
 
+    @Override
+    public boolean isEnabled() {
+    	// 계정 활성화 여부 확인: ACTIVE 사용자만 로그인할 수 있다.
+    	return status == UserStatus.ACTIVE;
+    }
     // 예전에는 UserDetails 구현 시 아래 상태 확인 메서드를 직접 구현해야 했지만, Spring Security 7부터는 기본 구현이 제공되어 필요한 메서드만 재정의하면 된다.
     /* 
     @Override
@@ -79,9 +84,4 @@ public class AppUserDetails implements UserDetails {
     }
     */
 
-    @Override
-    public boolean isEnabled() {
-    	// 계정 활성화 여부 확인: ACTIVE 사용자만 로그인할 수 있다.
-        return status == UserStatus.ACTIVE;
-    }
 }

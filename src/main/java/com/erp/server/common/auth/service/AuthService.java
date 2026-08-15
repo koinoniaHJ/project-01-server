@@ -13,7 +13,7 @@ import com.erp.server.common.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
-// 로그인 요청 정보를 AuthenticationManager에 전달하여 실제 사용자 인증을 처리하기 위한 Service 클래스
+// 로그인 요청 정보를 AuthenticationManager에 전달하여 실제 사용자 인증을 수행하고, 인증 실패를 공통 ErrorCode 기준으로 변환하기 위한 Service 클래스
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -30,7 +30,7 @@ public class AuthService {
                         request.password());
         try {
 
-            // AuthenticationManager에 인증을 요청한다.
+            // 인증에 성공하면 AuthenticationManager가 인증 완료된 Authentication을 반환
             return authenticationManager.authenticate(authenticationToken);
 
         } catch (DisabledException exception) {
