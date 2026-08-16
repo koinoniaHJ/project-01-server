@@ -21,96 +21,85 @@ import com.erp.server.common.security.RestAuthenticationEntryPoint;
 
 /**
  * Spring Security에서 세션 기반 인증과 요청 접근 제어, CSRF 검증에 대한 기본 보안 설정을 구성하기 위한 설정 클래스
- * 
- * {@code @Configuration}: 해당 클래스가 Spring 설정을 정의하는 클래스라는 것을 나타내는 annotation
- * {@code @EnableWebSecurity}: Spring Security의 웹 보안 기능을 활성화하고 웹 보안 설정을 구성할 수 있도록 하는 annotation
+ *
+ * {@code @Configuration}       Spring 설정 정보를 정의하는 클래스임을 나타내는 어노테이션
+ * {@code @EnableWebSecurity}   Spring Security의 웹 보안 기능을 활성화하고, 웹 보안 설정을 구성할 수 있도록 하는 어노테이션
+ *
+ * 서버 시작 시 {@code @Configuration}으로 설정 클래스로 등록된 SecurityConfig.java에서 
+ * {@code @Bean} 메서드를 통해 SecurityFilterChain을 생성·등록한다.
+ * 이후 HTTP 요청마다 SecurityFilterChain이 먼저 실행되어 인증·인가·CSRF 검사를 수행한 뒤, 통과한 요청만 Controller로 전달된다.
+ *
+ * HttpSecurity http: SecurityFilterChain에 적용할 보안 규칙을 설정하는 객체
+ * SecurityFilterChain: HttpSecurity의 보안 설정을 http.build()로 생성한 필터 체인
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
-	/*
-	 * RestAuthenticationEntryPoint와 RestAccessDeniedHandler는 @Component로 등록된 Spring Bean이므로, 
-	 * securityFilterChain() 실행 시 Spring이 필요한 객체를 매개변수로 자동 주입한다.
-	 * 
-	 */
 	
-	/*
-     * /api/** 요청에 적용되는 API 전용 SecurityFilterChain
-     */ 
+	// ********** HTTP 요청 보안 규칙을 구성하고 SecurityFilterChain을 생성하는 메서드 **********
 	@Bean
 	@Order(1)
-	public SecurityFilterChain securityFilterChain(
-			HttpSecurity http,
-			RestAuthenticationEntryPoint restAuthenticationEntryPoint, 
-			RestAccessDeniedHandler restAccessDeniedHandler,
+	public SecurityFilterChain securityFilterChain(HttpSecurity http, RestAuthenticationEntryPoint restAuthenticationEntryPoint, RestAccessDeniedHandler restAccessDeniedHandler, 
 			CsrfTokenRepository csrfTokenRepository) throws Exception {
 
-		/*
-		 * authorizeHttpRequests: HTTP 요청별 접근 권한을 설정한다.
-		 * authenticated(): 인증된(로그인된) 사용자만 해당 요청에 접근할 수 있도록 설정한다.
-		 * 현재는 모든 요청에 인증을 요구하고, 로그인 API처럼 인증 없이 접근해야 하는 경로는 이후 permitAll()로 별도 허용한다.
-		 */
-		http	// /api/** 요청에만 이 SecurityFilterChain을 적용한다.
-				.securityMatcher("/api/**") 
-		
-				.authorizeHttpRequests(authorize -> authorize
-
-						// 로그인 전 CSRF 토큰 발급과 로그인 API는 비로그인 사용자도 접근할 수 있다.
+		http.securityMatcher("/api/**") 								// "/api/**" 요청에만 이 SecurityFilterChain을 적용한다. 
+				.authorizeHttpRequests(authorize -> authorize			// HTTP 요청별 접근 권한을 설정한다.
+		                .requestMatchers(								// requestMatchers(): 요청에 적용할 권한 규칙을 지정
+		                		"/api/v1/auth/csrf", 
+		                		"/api/v1/auth/login"
+		                ).permitAll()									// 로그인 전 CSRF 토큰 발급과 로그인 API는 비로그인 사용자도 접근할 수 있다.
 		                .requestMatchers(
-		                        "/api/v1/auth/csrf",
-		                        "/api/v1/auth/login"
-		                ).permitAll()
-
-				        // 그 외 API는 로그인된 사용자만 접근할 수 있다.
-				        .anyRequest().authenticated())
+		                		"/api/v1/users", 
+		                		"/api/v1/users/**"
+		                ).hasRole("ADMIN")								// 사용자 관리 API는 ADMIN 역할만 접근할 수 있다.
+				        .anyRequest().authenticated())					// 그 외 API는 인증된(로그인된) 사용자만 접근할 수 있다.
 				
-				// httpBasic.disable(): 매 요청마다 아이디와 비밀번호를 전달하는 HTTP Basic 인증은 사용하지 않고, 로그인 후 생성된 세션을 이용하는 세션 기반 인증을 사용한다.
-				.httpBasic(httpBasic -> httpBasic.disable()) // HTTP Basic 인증은 사용하지 않는다.
+																		// HTTP Basic 인증: 매 요청마다 아이디와 비밀번호를 Authorization 헤더에 담아서 보내는 방식
+				.httpBasic(httpBasic -> httpBasic.disable()) 			// HTTP Basic 인증 비활성화
 
-				// sessionManagement(IF_REQUIRED): 로그인 등 세션이 필요한 경우에만 세션을 생성하고, 이후 요청에서는 기존 세션을 사용한다.
+				// 세션이 필요한 경우에만 생성하고, 기존 세션이 있으면 재사용하도록 설정한다.
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 				
-				// API 요청을 로그인 후 Redirect하기 위해 저장하지 않는다.
+				// 로그인 전 요청을 저장했다가 로그인 후 Redirect하지 않는다.
 	            .requestCache(requestCache -> requestCache.disable())
 
 				// CSRF 보호 기능을 활성화한다. POST, PUT, PATCH, DELETE 등 상태를 변경하는 요청에서는 올바른 CSRF 토큰인지 검증하게 된다.
-	            .csrf(csrf ->
-                	csrf.csrfTokenRepository(csrfTokenRepository))
+	            .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
 
 				 // API의 401/403 오류는 직접 만든 Handler에서 공통 오류 응답으로 처리한다.
 				.exceptionHandling(exception -> exception
 		                .authenticationEntryPoint(restAuthenticationEntryPoint)
-		                .accessDeniedHandler(restAccessDeniedHandler)
-		            );
+		                .accessDeniedHandler(restAccessDeniedHandler));
 
-		return http.build(); // 위 보안 규칙으로 SecurityFilterChain을 생성하고, @Bean을 통해 Spring Bean으로 등록한다.
+		return http.build(); // 위에서 설정한 보안 규칙을 적용한 SecurityFilterChain을 생성해 반환한다.
 	}
 	
-     // 로그인 비밀번호의 해시 생성 및 검증에 사용할 PasswordEncoder를 등록하기 위한 메서드
+    // ********** 비밀번호 해시 생성과 로그인 시 비밀번호 검증에 사용할 PasswordEncoder를 생성하기 위한 메서드 **********
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // APP_USER.password_hash에 저장할 비밀번호는 BCrypt 방식으로 처리한다.
+        // 비밀번호를 BCrypt 방식으로 해시 처리하고, 로그인 시 입력 비밀번호와 해시값을 비교한다.
         return new BCryptPasswordEncoder();
     }
     
-    // REST 로그인에서 AppUserDetailsService와 PasswordEncoder를 이용해 사용자 인증을 처리할 AuthenticationManager를 등록하기 위한 메서드
+    // ********** 로그인 요청에서 AppUserDetailsService로 사용자를 조회하고 PasswordEncoder로 비밀번호를 검증하는 AuthenticationManager를 생성하기 위한 메서드 **********
     @Bean
     public AuthenticationManager authenticationManager(AppUserDetailsService appUserDetailsService, PasswordEncoder passwordEncoder) {
 
-    	// 사용자 조회와 비밀번호 검증을 실제로 처리할 인증 객체
+    	// AppUserDetailsService로 사용자를 조회하고 PasswordEncoder로 비밀번호를 검증할 DaoAuthenticationProvider를 생성
         DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider(appUserDetailsService);
 
+        // 로그인 비밀번호 검증에 사용할 PasswordEncoder를 설정
         authenticationProvider.setPasswordEncoder(passwordEncoder);
 
-        // DaoAuthenticationProvider를 이용해 인증을 처리하는 AuthenticationManager를 생성해 반환한다.
+        // DaoAuthenticationProvider를 이용해 실제 인증을 수행할 AuthenticationManager를 생성해 반환
         return new ProviderManager(authenticationProvider);
     }
     
-    // 현재 Session에 CSRF 토큰을 저장하고 조회하기 위한 CsrfTokenRepository를 등록하기 위한 메서드
+    // ********** CSRF 토큰을 HTTP Session에 저장하고 조회할 CsrfTokenRepository를 생성하기 위한 메서드 **********
     @Bean
     public CsrfTokenRepository csrfTokenRepository() {
 
+    	// CSRF 토큰을 HTTP Session에 저장하는 구현체를 반환
         return new HttpSessionCsrfTokenRepository();
     }
 }
