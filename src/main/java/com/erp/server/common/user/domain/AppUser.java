@@ -98,9 +98,7 @@ public class AppUser {
         updatedAt = LocalDateTime.now();
     }
 
-	// Lombok은 Getter 메서드 이름 충돌을 대소문자 구분 없이 확인하므로,
-	// username의 getUsername()과 userName의 getUserName()을 구분하지 못할 수 있어 직접 작성한다.
-
+	// Lombok은 Getter 메서드 이름 충돌을 대소문자 구분 없이 확인하므로, username의 getUsername()과 userName의 getUserName()을 구분하지 못할 수 있어 직접 작성한다.
     // 로그인 아이디 반환
     public String getUsername() {
         return username;
@@ -109,5 +107,55 @@ public class AppUser {
     // 사용자 표시 이름 반환
     public String getUserName() {
         return userName;
+    }
+    
+    // 신규 사용자 Entity를 생성한다.
+    public static AppUser create(
+            String username,
+            String passwordHash,
+            String userName,
+            UserRole role,
+            AppUser createdBy) {
+
+        AppUser appUser = new AppUser();
+
+        appUser.username = username;
+        appUser.passwordHash = passwordHash;
+        appUser.userName = userName;
+        appUser.role = role;
+        appUser.status = UserStatus.ACTIVE;
+        appUser.createdBy = createdBy;
+        appUser.updatedBy = createdBy;
+
+        return appUser;
+    }
+
+    // 사용자명과 역할을 수정한다.
+    public void update(
+            String userName,
+            UserRole role,
+            AppUser updatedBy) {
+
+        this.userName = userName;
+        this.role = role;
+        this.updatedBy = updatedBy;
+    }
+
+    // 사용자 상태를 변경한다.
+    public void changeStatus(
+            UserStatus status,
+            AppUser updatedBy) {
+
+        this.status = status;
+        this.updatedBy = updatedBy;
+    }
+
+    // 사용자 비밀번호를 초기화한다.
+    public void resetPassword(
+            String passwordHash,
+            AppUser updatedBy) {
+
+        this.passwordHash = passwordHash;
+        this.updatedBy = updatedBy;
     }
 }
