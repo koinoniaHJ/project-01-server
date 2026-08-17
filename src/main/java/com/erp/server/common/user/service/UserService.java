@@ -97,6 +97,11 @@ public class UserService {
 
         // 화면에서 전달한 version이 현재 DB version과 같은지 확인한다.
         validateVersion(appUser, request.version());
+        
+        validateLastActiveAdmin(
+                appUser,
+                request.role(),
+                appUser.getStatus());
 
         // 현재 로그인한 ADMIN 사용자를 최근 수정 사용자로 사용한다.
         AppUser currentUser = findUser(currentUserId);
@@ -123,6 +128,11 @@ public class UserService {
 
         // 화면에서 전달한 version이 현재 DB version과 같은지 확인한다.
         validateVersion(appUser, request.version());
+        
+        validateLastActiveAdmin(
+                appUser,
+                appUser.getRole(),
+                request.status());
 
         // 현재 로그인한 ADMIN 사용자를 최근 수정 사용자로 사용한다.
         AppUser currentUser = findUser(currentUserId);
@@ -165,6 +175,34 @@ public class UserService {
         return UserResponse.from(appUser);
     }
 
+    private void validateLastActiveAdmin(
+            AppUser appUser,
+            UserRole nextRole,
+            UserStatus nextStatus) {
+
+        boolean removesActiveAdmin =
+                appUser.getRole() == UserRole.ADMIN
+                        && appUser.getStatus() == UserStatus.ACTIVE
+                        && (nextRole != UserRole.ADMIN
+                        || nextStatus != UserStatus.ACTIVE);
+
+        if (!removesActiveAdmin) {
+            return;
+        }
+
+        int activeAdminCount = appUserRepository
+                .findByRoleAndStatusForUpdate(
+                        UserRole.ADMIN,
+                        UserStatus.ACTIVE)
+                .size();
+
+        if (activeAdminCount <= 1) {
+            throw new BusinessException(
+                    ErrorCode.CONFLICT,
+                    "마지막 활성 관리자의 역할이나 상태는 변경할 수 없습니다.");
+        }
+    }
+    
     // userId로 사용자를 조회하고 없으면 404 오류로 처리한다.
     private AppUser findUser(Long userId) {
 
