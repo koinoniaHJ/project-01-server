@@ -1,15 +1,20 @@
 package com.erp.server.common.auth.service;
 
+import java.time.LocalDateTime;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.erp.server.common.auth.dto.LoginRequest;
 import com.erp.server.common.exception.BusinessException;
 import com.erp.server.common.exception.ErrorCode;
+import com.erp.server.common.security.AppUserDetails;
+import com.erp.server.common.user.repository.AppUserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -19,8 +24,11 @@ import lombok.RequiredArgsConstructor;
 public class AuthService {
 
     private final AuthenticationManager authenticationManager;
+    private final AppUserRepository appUserRepository;
+    
 
     // 로그인 아이디와 비밀번호를 이용하여 Spring Security 인증을 수행하기 위한 메서드
+    @Transactional
     public Authentication authenticate(LoginRequest request) {
 
         // 입력받은 로그인 아이디와 비밀번호를 인증 요청 정보에 담는다.
@@ -30,8 +38,13 @@ public class AuthService {
                         request.password());
         try {
 
-            // 인증에 성공하면 AuthenticationManager가 인증 완료된 Authentication을 반환
-            return authenticationManager.authenticate(authenticationToken);
+        	Authentication authentication = authenticationManager.authenticate(authenticationToken);
+
+        	AppUserDetails currentUser = (AppUserDetails) authentication.getPrincipal();
+
+        	appUserRepository.updateLastLoginAt(currentUser.getUserId(), LocalDateTime.now());
+
+        	return authentication;
 
         } catch (DisabledException exception) {
 
