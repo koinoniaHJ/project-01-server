@@ -12,10 +12,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 
 import com.erp.server.common.security.AppUserDetailsService;
+import com.erp.server.common.security.CurrentUserRefreshFilter;
 import com.erp.server.common.security.RestAccessDeniedHandler;
 import com.erp.server.common.security.RestAuthenticationEntryPoint;
 
@@ -39,8 +41,12 @@ public class SecurityConfig {
 	// ********** HTTP 요청 보안 규칙을 구성하고 SecurityFilterChain을 생성하는 메서드 **********
 	@Bean
 	@Order(1)
-	public SecurityFilterChain securityFilterChain(HttpSecurity http, RestAuthenticationEntryPoint restAuthenticationEntryPoint, RestAccessDeniedHandler restAccessDeniedHandler, 
-			CsrfTokenRepository csrfTokenRepository) throws Exception {
+	public SecurityFilterChain securityFilterChain(
+	        HttpSecurity http,
+	        RestAuthenticationEntryPoint restAuthenticationEntryPoint,
+	        RestAccessDeniedHandler restAccessDeniedHandler,
+	        CsrfTokenRepository csrfTokenRepository,
+	        AppUserDetailsService appUserDetailsService) throws Exception {
 
 		http.securityMatcher("/api/**") 								// "/api/**" 요청에만 이 SecurityFilterChain을 적용한다. 
 				.authorizeHttpRequests(authorize -> authorize			// HTTP 요청별 접근 권한을 설정한다.
@@ -65,6 +71,14 @@ public class SecurityConfig {
 
 				// CSRF 보호 기능을 활성화한다. POST, PUT, PATCH, DELETE 등 상태를 변경하는 요청에서는 올바른 CSRF 토큰인지 검증하게 된다.
 	            .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
+	            
+	            .addFilterBefore(
+	                    new CurrentUserRefreshFilter(
+	                            appUserDetailsService,
+	                            restAccessDeniedHandler
+	                    ),
+	                    AuthorizationFilter.class
+	            )
 
 				 // API의 401/403 오류는 직접 만든 Handler에서 공통 오류 응답으로 처리한다.
 				.exceptionHandling(exception -> exception
