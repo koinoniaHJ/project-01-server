@@ -18,11 +18,13 @@ import com.erp.server.common.user.domain.UserStatus;
 
 import jakarta.persistence.LockModeType;
 
-// APP_USER의 기본 조회·저장 기능과 로그인 아이디 및 사용자 관리 조회를 처리하기 위한 Repository
+// ********** APP_USER의 기본 CRUD, 로그인 사용자 조회, 최종 로그인 갱신, 사용자 목록 조회와 마지막 활성 ADMIN 보호 조회를 처리하기 위한 Repository interface **********
 public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
+    // ========== 로그인 아이디로 사용자를 조회하는 Query Method ==========
     Optional<AppUser> findByUsername(String username);
-    
+
+    // ========== 사용자 version을 변경하지 않고 최종 로그인 일시만 갱신하는 메서드 ==========
     @Modifying
     @Query("""
             update AppUser u
@@ -32,9 +34,12 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     void updateLastLoginAt(
             @Param("userId") Long userId,
             @Param("lastLoginAt") LocalDateTime lastLoginAt);
-    
+
+    // ========== 같은 로그인 아이디가 존재하는지 확인하는 Query Method ==========
     boolean existsByUsername(String username);
-    
+
+    // ========== 활성 ADMIN 목록을 잠근 상태로 조회하는 메서드 ==========
+    // 동시에 들어온 강등·비활성화 요청이 같은 관리자 수를 보고 모두 통과하지 못하도록 PESSIMISTIC_WRITE를 사용한다.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select u
@@ -47,7 +52,7 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
             @Param("role") UserRole role,
             @Param("status") UserStatus status);
 
-    // 사용자 상태와 역할을 선택 조건으로 적용하여 사용자 목록을 페이지 조회한다.
+    // ========== 상태와 역할을 선택 조건으로 적용하여 사용자 목록을 페이지 조회하는 메서드 ==========
     @Query("""
             select u
             from AppUser u

@@ -14,74 +14,64 @@ import com.erp.server.common.user.domain.UserStatus;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-
-// DB에서 조회한 AppUser의 사용자 정보를 Spring Security가 인증과 권한 검사에 사용할 수 있는 UserDetails 형태로 변환하여 보관하는 사용자 정보 객체
-@RequiredArgsConstructor	// Lombok이 final 필드를 매개변수로 받는 생성자를 자동으로 생성한다.
+// ********** DB에서 조회한 AppUser를 Spring Security가 인증과 권한 검사에 사용할 수 있는 사용자 정보로 변환하여 보관하기 위한 UserDetails 구현 클래스 **********
+@RequiredArgsConstructor
 public class AppUserDetails implements UserDetails {
 
     @Getter
-    private final Long userId;     	// 현재 로그인 사용자를 식별하는 사용자 PK
+    private final Long userId;
     private final String username;
     private final String passwordHash;
     private final String userName;
+
     @Getter
     private final UserRole role;
     private final UserStatus status;
 
-    // AppUser Entity를 Spring Security에서 사용할 AppUserDetails로 변환한다.
+    // ========== AppUser Entity를 AppUserDetails로 변환하는 정적 팩토리 메서드 ==========
     public static AppUserDetails from(AppUser appUser) {
 
-        return new AppUserDetails(appUser.getUserId(), appUser.getUsername(), appUser.getPasswordHash(), appUser.getUserName(), 
-        		appUser.getRole(), appUser.getStatus());
+        return new AppUserDetails(
+                appUser.getUserId(),
+                appUser.getUsername(),
+                appUser.getPasswordHash(),
+                appUser.getUserName(),
+                appUser.getRole(),
+                appUser.getStatus()
+        );
     }
 
-    // GrantedAuthority 또는 이를 구현한 타입을 담은 Collection을 반환할 수 있다는 뜻
+    // ========== 사용자 역할을 Spring Security 권한 목록으로 변환하여 반환하는 메서드 ==========
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-         
-        // DB의 ADMIN / OFFICE / WAREHOUSE 역할을 ROLE_ADMIN / ROLE_OFFICE / ROLE_WAREHOUSE 권한으로 변환한다.
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+
+        // hasRole("ADMIN")이 확인하는 ROLE_ADMIN 형식에 맞춰 DB 역할 앞에 ROLE_을 붙인다.
+        return List.of(
+                new SimpleGrantedAuthority("ROLE_" + role.name())
+        );
     }
 
+    // ========== 인증에 사용할 비밀번호 해시를 반환하는 메서드 ==========
     @Override
     public String getPassword() {
         return passwordHash;
     }
-    
+
+    // ========== 로그인 아이디를 반환하는 메서드 ==========
     @Override
     public String getUsername() {
         return username;
     }
 
-    // Lombok은 getUsername()과 getUserName()을 대소문자 구분 없이 같은 이름으로 판단하므로 직접 작성한다.
+    // Lombok이 username과 userName의 Getter 이름을 충돌로 판단할 수 있어 직접 구분한다.
+    // ========== 사용자 표시 이름을 반환하는 메서드 ==========
     public String getUserName() {
         return userName;
     }
 
+    // ========== 사용자가 로그인 가능한 활성 상태인지 반환하는 메서드 ==========
     @Override
     public boolean isEnabled() {
-    	// 계정 활성화 여부 확인: ACTIVE 사용자만 로그인할 수 있다.
-    	return status == UserStatus.ACTIVE;
+        return status == UserStatus.ACTIVE;
     }
-    // 예전에는 UserDetails 구현 시 아래 상태 확인 메서드를 직접 구현해야 했지만, Spring Security 7부터는 기본 구현이 제공되어 필요한 메서드만 재정의하면 된다.
-    /* 
-    @Override
-    public boolean isAccountNonExpired() {
-        // 계정 만료 여부 확인
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        // 계정 잠금 여부 확인
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        // 비밀번호 만료 여부 확인
-        return true;
-    }
-    */
-
 }

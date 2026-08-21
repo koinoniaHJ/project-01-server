@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 
-// 사용자 비밀번호 초기화 정보를 전달받기 위한 요청 DTO record
+// ********** 새 비밀번호와 동시 수정 확인용 version을 전달받기 위한 비밀번호 초기화 요청 DTO record **********
 public record UserPasswordResetRequest(
 
         @NotBlank(message = "새 비밀번호는 필수입니다.")

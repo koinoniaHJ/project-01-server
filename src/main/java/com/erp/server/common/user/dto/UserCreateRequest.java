@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-// 신규 사용자 등록 정보를 전달받기 위한 요청 DTO record
+// ********** 신규 사용자 등록에 필요한 로그인 아이디·비밀번호·사용자명·역할을 전달받기 위한 요청 DTO record **********
 public record UserCreateRequest(
 
         @NotBlank(message = "로그인 아이디는 필수입니다.")

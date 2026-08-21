@@ -5,7 +5,7 @@ import com.erp.server.common.user.domain.UserStatus;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 
-// 사용자 상태 변경 정보를 전달받기 위한 요청 DTO record
+// ********** 사용자 상태 변경값과 동시 수정 확인용 version을 전달받기 위한 요청 DTO record **********
 public record UserStatusRequest(
 
         @NotNull(message = "사용자 상태는 필수입니다.")

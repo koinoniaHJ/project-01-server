@@ -27,81 +27,74 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-// CSRF 토큰 발급과 로그인·로그아웃·현재 사용자 조회 REST API를 처리하기 위한 Controller 클래스
-@RestController // REST API 요청을 처리하고 반환값을 응답 본문(JSON 등)으로 전달하는 Controller로 지정
+// ********** CSRF 토큰 발급, REST 로그인, 현재 사용자 조회와 로그아웃 요청을 처리하기 위한 인증 Controller 클래스 **********
+@RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
-    private final CsrfTokenRepository csrfTokenRepository;
+	private final AuthService authService;
+	private final CsrfTokenRepository csrfTokenRepository;
 
-    // 인증 성공 정보를 HTTP Session에 저장하기 위해 사용한다.
-    private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
+	// 인증 성공 정보를 다음 요청에서도 사용할 수 있도록 HTTP Session에 저장한다.
+	private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
-    // 현재 Session에서 사용할 CSRF 토큰을 반환하기 위한 메서드
-    @GetMapping("/csrf")
-    public ApiResponse<CsrfResponse> csrf(CsrfToken csrfToken) {
+	// 현재 HTTP Session과 인증 정보를 정리하는 Spring Security Logout Handler이다.
+	private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
 
-        return ApiResponse.success(CsrfResponse.from(csrfToken));
-    }
+	// ========== 현재 Session에서 사용할 CSRF 토큰을 반환하는 메서드 ==========
+	@GetMapping("/csrf")
+	public ApiResponse<CsrfResponse> csrf(CsrfToken csrfToken) {
+		return ApiResponse.success(CsrfResponse.from(csrfToken));
+	}
 
-    // 로그인 아이디와 비밀번호를 인증하고 로그인 Session을 생성하기 위한 메서드
-    @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(
-            @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+	// ========== 로그인 정보를 인증하고 인증 결과를 HTTP Session에 저장하는 메서드 ==========
+	@PostMapping("/login")
+	public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest,
+			HttpServletResponse httpResponse) {
 
-        // AuthService를 통해 실제 사용자 인증을 수행한다.
-        Authentication authentication = authService.authenticate(request);
+		Authentication authentication = authService.authenticate(request);
 
-        // 로그인 전 CSRF 토큰 발급으로 Session이 만들어져 있으면 로그인 성공 시 Session ID를 변경하여 기존 Session ID를 그대로 사용하지 않는다.
-        if (httpRequest.getSession(false) != null) {
-            httpRequest.changeSessionId();
-        }
+		// 로그인 전 CSRF 발급으로 Session이 이미 있으면 Session 고정 공격을 막기 위해 ID를 변경한다.
+		if (httpRequest.getSession(false) != null) {
+			httpRequest.changeSessionId();
+		}
 
-        // 인증된 Authentication을 저장할 새로운 SecurityContext를 생성한다.
-        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+		SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
 
-        securityContext.setAuthentication(authentication);
+		securityContext.setAuthentication(authentication);
 
-        // 현재 요청에서도 인증된 사용자 정보를 사용할 수 있도록 설정한다.
-        SecurityContextHolder.setContext(securityContext);
+		// 현재 요청에서 인증 정보를 사용할 수 있도록 SecurityContextHolder에 저장한다.
+		SecurityContextHolder.setContext(securityContext);
 
-        // 이후 요청에서도 로그인 상태가 유지되도록 HTTP Session에 저장한다.
-        securityContextRepository.saveContext(securityContext, httpRequest, httpResponse);
+		// 이후 요청에서도 로그인 상태가 유지되도록 SecurityContext를 HTTP Session에 저장한다.
+		securityContextRepository.saveContext(securityContext, httpRequest, httpResponse);
 
-        // 로그인 성공 전 사용하던 CSRF 토큰을 제거한다. 로그인 성공 후 GET /api/v1/auth/csrf를 다시 호출하여 새 토큰을 발급받는다.
-        csrfTokenRepository.saveToken(null, httpRequest, httpResponse);
+		// 인증 전 토큰은 폐기하고 로그인 후 GET /csrf에서 새 토큰을 발급받게 한다.
+		csrfTokenRepository.saveToken(null, httpRequest, httpResponse);
 
-        // 인증 완료 Authentication에서 실제 로그인 사용자 정보를 가져온다.
-        AppUserDetails appUserDetails = (AppUserDetails) authentication.getPrincipal();
+		AppUserDetails appUserDetails = (AppUserDetails) authentication.getPrincipal();
 
-        return ApiResponse.success(LoginResponse.from(appUserDetails));
-    }
-    
-    // 현재 로그인 사용자의 기본 정보를 반환하기 위한 메서드
-    @GetMapping("/me")
-    public ApiResponse<MeResponse> me(Authentication authentication) {
+		return ApiResponse.success(LoginResponse.from(appUserDetails));
+	}
 
-        // 현재 Session에 저장된 인증 정보에서 실제 로그인 사용자 정보를 가져온다.
-        AppUserDetails appUserDetails = (AppUserDetails) authentication.getPrincipal();
+	// ========== 현재 Session의 최신 로그인 사용자 정보를 반환하는 메서드 ==========
+	@GetMapping("/me")
+	public ApiResponse<MeResponse> me(Authentication authentication) {
 
-        return ApiResponse.success(MeResponse.from(appUserDetails));
-    }
-    
-    // 로그아웃 시 현재 인증 정보와 HTTP Session을 정리하기 위해 사용한다.
-    private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
+		// CurrentUserRefreshFilter가 DB의 최신 상태와 역할로 Authentication을 갱신한 뒤 전달한다.
+		AppUserDetails appUserDetails = (AppUserDetails) authentication.getPrincipal();
 
-    // 현재 로그인 Session과 인증 정보를 정리하여 로그아웃하기 위한 메서드
-    @PostMapping("/logout")
-    public ApiResponse<Void> logout(
-            HttpServletRequest httpRequest,
-            HttpServletResponse httpResponse,
-            Authentication authentication) {
+		return ApiResponse.success(MeResponse.from(appUserDetails));
+	}
 
-        // 현재 HTTP Session을 무효화하고 Spring Security 인증 정보를 정리한다.
-        logoutHandler.logout(httpRequest, httpResponse, authentication);
+	// ========== 현재 HTTP Session과 인증 정보를 정리하여 로그아웃하는 메서드 ==========
+	@PostMapping("/logout")
+	public ApiResponse<Void> logout(HttpServletRequest httpRequest, HttpServletResponse httpResponse,
+			Authentication authentication) {
 
-        return ApiResponse.success(null);
-    }
+		logoutHandler.logout(httpRequest, httpResponse, authentication);
+
+		return ApiResponse.success(null);
+	}
 }

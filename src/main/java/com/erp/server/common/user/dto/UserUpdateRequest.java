@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
-// 사용자명과 역할 수정 정보를 전달받기 위한 요청 DTO record
+// ********** 사용자명과 역할 변경값 및 동시 수정 확인용 version을 전달받기 위한 요청 DTO record **********
 public record UserUpdateRequest(
 
         @NotBlank(message = "사용자명은 필수입니다.")

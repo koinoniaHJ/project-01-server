@@ -22,140 +22,127 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// Oracle Database의 APP_USER 테이블과 사용자 계정 정보를 Java 객체로 매핑하기 위한 Entity 클래스
-@Entity														// 해당 클래스가 JPA Entity임을 지정
-@Table(name = "APP_USER")									// Entity와 매핑할 실제 DB 테이블을 지정
-@Getter														// getter 메서드를 Lombok이 자동 생성
-@NoArgsConstructor(access = AccessLevel.PROTECTED)			// JPA가 Entity를 생성할 때 필요한 기본 생성자를 생성한다.
+// ********** Oracle Database의 APP_USER 테이블과 사용자 계정 정보를 Java 객체로 매핑하고 계정 정보 변경 규칙을 관리하기 위한 Entity 클래스 **********
+@Entity
+@Table(name = "APP_USER")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AppUser {
 
-    @Id				// Primary Key와 매핑되는 필드를 지정한다.
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "appUserSequenceGenerator") // PK 값을 Sequence 등의 방식으로 생성하도록 지정
-    @SequenceGenerator(name = "appUserSequenceGenerator", sequenceName = "SEQ_APP_USER", allocationSize = 1) // JPA에서 사용할 Sequence Generator와 실제 Oracle Sequence를 연결
-    @Column(name = "user_id", nullable = false)	// Java 필드와 DB 컬럼을 매핑한다.
-    private Long userId;
+	// Oracle의 SEQ_APP_USER에서 다음 값을 받아 PK로 사용한다.
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "appUserSequenceGenerator")
+	@SequenceGenerator(name = "appUserSequenceGenerator", sequenceName = "SEQ_APP_USER", allocationSize = 1)
+	@Column(name = "user_id", nullable = false)
+	private Long userId;
 
-    // 로그인에 사용하는 아이디이며 DB에서 UNIQUE로 관리한다.
-    @Column(name = "username", nullable = false, length = 50)
-    private String username;
+	// 로그인 아이디이며 DB의 UNIQUE 제약으로 중복을 최종 차단한다.
+	@Column(name = "username", nullable = false, length = 50)
+	private String username;
 
-    // 평문 비밀번호가 아닌 비밀번호 해시를 저장한다.
-    @Column(name = "password_hash", nullable = false, length = 255)
-    private String passwordHash;
+	// 평문 비밀번호가 아닌 BCrypt 해시값을 저장한다.
+	@Column(name = "password_hash", nullable = false, length = 255)
+	private String passwordHash;
 
-    // 화면 등에 표시할 사용자명
-    @Column(name = "user_name", nullable = false, length = 100)
-    private String userName;
+	@Column(name = "user_name", nullable = false, length = 100)
+	private String userName;
 
-    // Enum 값을 ADMIN, OFFICE, WAREHOUSE 문자열 그대로 DB에 저장한다.
-    @Enumerated(EnumType.STRING)	// Java Enum 값을 Enum 이름 그대로 문자열로 DB에 저장한다.
-    @Column(name = "role", nullable = false, length = 20)
-    private UserRole role;
+	// Enum 이름을 ADMIN, OFFICE, WAREHOUSE 문자열로 저장한다.
+	@Enumerated(EnumType.STRING)
+	@Column(name = "role", nullable = false, length = 20)
+	private UserRole role;
 
-    // Enum 값을 ACTIVE, INACTIVE 문자열 그대로 DB에 저장한다.
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
-    private UserStatus status = UserStatus.ACTIVE;
+	// Enum 이름을 ACTIVE, INACTIVE 문자열로 저장한다.
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status", nullable = false, length = 20)
+	private UserStatus status = UserStatus.ACTIVE;
 
-    // 최근 정상 로그인 일시
-    @Column(name = "last_login_at")
-    private LocalDateTime lastLoginAt;
+	@Column(name = "last_login_at")
+	private LocalDateTime lastLoginAt;
 
-    // 해당 사용자를 등록한 APP_USER를 다시 참조한다.
-    @ManyToOne(fetch = FetchType.LAZY)	// @ManyToONe: 여러 Entity가 하나의 Entity를 참조하는 관계를 매핑한다.
-    @JoinColumn(name = "created_by")	// 연관관계에서 FK로 사용할 DB 컬럼을 지정한다.
-    private AppUser createdBy;
+	// 사용자를 등록한 APP_USER를 같은 테이블의 Entity 관계로 참조한다.
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "created_by")
+	private AppUser createdBy;
 
-    // 최초 등록 일시는 이후 UPDATE 대상에서 제외한다.
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+	@Column(name = "created_at", nullable = false, updatable = false)
+	private LocalDateTime createdAt;
 
-    // 해당 사용자를 가장 최근에 수정한 APP_USER를 다시 참조한다.
-    @ManyToOne(fetch = FetchType.LAZY) // FetchType.LAZY: 연관된 Entity를 처음부터 함께 조회하지 않고 실제로 해당 값에 접근할 때 조회하도록 지정하는 방식
-    @JoinColumn(name = "updated_by")
-    private AppUser updatedBy;
+	// 사용자를 마지막으로 수정한 APP_USER를 같은 테이블의 Entity 관계로 참조한다.
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "updated_by")
+	private AppUser updatedBy;
 
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+	@Column(name = "updated_at", nullable = false)
+	private LocalDateTime updatedAt;
 
-    // 동일 사용자 정보를 동시에 수정할 경우 충돌을 확인하기 위한 낙관적 잠금 버전
-    @Version		// 낙관적 잠금에 사용할 필드를 지정
-    @Column(name = "version", nullable = false)
-    private Long version;
+	// UPDATE 시 조회 당시의 version과 DB의 version을 비교하여 동시 수정 충돌을 확인한다.
+	@Version
+	@Column(name = "version", nullable = false)
+	private Long version;
 
-    // 새로운 사용자 Entity가 처음 저장되기 직전에 등록·수정 일시를 설정한다.
-    @PrePersist		// Entity가 처음 저장되기 직전에 실행할 메서드를 지정
-    protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
+	// ========== 신규 Entity가 저장되기 전에 등록·수정 일시를 설정하는 메서드 ==========
+	@PrePersist
+	protected void onCreate() {
+		LocalDateTime now = LocalDateTime.now();
 
-        createdAt = now;
-        updatedAt = now;
-    }
+		createdAt = now;
+		updatedAt = now;
+	}
 
-    // 기존 사용자 Entity가 UPDATE되기 직전에 최근 수정 일시를 갱신한다.
-    @PreUpdate		// Entity가 수정되기 직전에 실행할 메서드를 지정
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
+	// ========== 기존 Entity가 수정되기 전에 최근 수정 일시를 갱신하는 메서드 ==========
+	@PreUpdate
+	protected void onUpdate() {
+		updatedAt = LocalDateTime.now();
+	}
 
-	// Lombok은 Getter 메서드 이름 충돌을 대소문자 구분 없이 확인하므로, username의 getUsername()과 userName의 getUserName()을 구분하지 못할 수 있어 직접 작성한다.
-    // 로그인 아이디 반환
-    public String getUsername() {
-        return username;
-    }
+	// Lombok이 username과 userName의 Getter 이름을 충돌로 판단할 수 있어 직접 구분한다.
+	// ========== 로그인 아이디를 반환하는 메서드 ==========
+	public String getUsername() {
+		return username;
+	}
 
-    // 사용자 표시 이름 반환
-    public String getUserName() {
-        return userName;
-    }
-    
-    // 신규 사용자 Entity를 생성한다.
-    public static AppUser create(
-            String username,
-            String passwordHash,
-            String userName,
-            UserRole role,
-            AppUser createdBy) {
+	// ========== 사용자 표시 이름을 반환하는 메서드 ==========
+	public String getUserName() {
+		return userName;
+	}
 
-        AppUser appUser = new AppUser();
+	// ========== 신규 사용자 Entity를 생성하는 정적 팩토리 메서드 ==========
+	public static AppUser create(String username, String passwordHash, String userName, UserRole role,
+			AppUser createdBy) {
 
-        appUser.username = username;
-        appUser.passwordHash = passwordHash;
-        appUser.userName = userName;
-        appUser.role = role;
-        appUser.status = UserStatus.ACTIVE;
-        appUser.createdBy = createdBy;
-        appUser.updatedBy = createdBy;
+		AppUser appUser = new AppUser();
 
-        return appUser;
-    }
+		appUser.username = username;
+		appUser.passwordHash = passwordHash;
+		appUser.userName = userName;
+		appUser.role = role;
+		appUser.status = UserStatus.ACTIVE;
+		appUser.createdBy = createdBy;
+		appUser.updatedBy = createdBy;
 
-    // 사용자명과 역할을 수정한다.
-    public void update(
-            String userName,
-            UserRole role,
-            AppUser updatedBy) {
+		return appUser;
+	}
 
-        this.userName = userName;
-        this.role = role;
-        this.updatedBy = updatedBy;
-    }
+	// ========== 사용자명과 역할을 변경하는 메서드 ==========
+	public void update(String userName, UserRole role, AppUser updatedBy) {
 
-    // 사용자 상태를 변경한다.
-    public void changeStatus(
-            UserStatus status,
-            AppUser updatedBy) {
+		this.userName = userName;
+		this.role = role;
+		this.updatedBy = updatedBy;
+	}
 
-        this.status = status;
-        this.updatedBy = updatedBy;
-    }
+	// ========== 사용자 상태를 변경하는 메서드 ==========
+	public void changeStatus(UserStatus status, AppUser updatedBy) {
 
-    // 사용자 비밀번호를 초기화한다.
-    public void resetPassword(
-            String passwordHash,
-            AppUser updatedBy) {
+		this.status = status;
+		this.updatedBy = updatedBy;
+	}
 
-        this.passwordHash = passwordHash;
-        this.updatedBy = updatedBy;
-    }
+	// ========== 사용자 비밀번호 해시를 변경하는 메서드 ==========
+	public void resetPassword(String passwordHash, AppUser updatedBy) {
+
+		this.passwordHash = passwordHash;
+		this.updatedBy = updatedBy;
+	}
 }

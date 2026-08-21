@@ -33,102 +33,63 @@ import com.erp.server.common.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-// 사용자 목록 조회·등록·수정·상태 변경·비밀번호 초기화 REST API를 처리하기 위한 Controller 클래스
+// ********** 사용자 관리 REST 요청을 받아 입력값을 검증하고 현재 ADMIN의 userId와 함께 UserService에 전달하기 위한 Controller 클래스 **********
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserService userService;
+	private final UserService userService;
 
-    // 사용자 상태와 역할 조건을 적용하여 사용자 목록을 조회한다.
-    @GetMapping
-    public ApiResponse<List<UserResponse>> getUsers(
-            @RequestParam(name = "status", required = false) UserStatus status,
-            @RequestParam(name = "role", required = false) UserRole role,
-            @PageableDefault(
-                    size = 20,
-                    sort = "userId",
-                    direction = Sort.Direction.DESC)
-            Pageable pageable) {
+	// ========== 상태와 역할 조건을 적용하여 사용자 목록을 조회하는 메서드 ==========
+	@GetMapping
+	public ApiResponse<List<UserResponse>> getUsers(@RequestParam(name = "status", required = false) UserStatus status,
+			@RequestParam(name = "role", required = false) UserRole role,
+			@PageableDefault(size = 20, sort = "userId", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        Page<UserResponse> users =
-                userService.getUsers(status, role, pageable);
+		Page<UserResponse> users = userService.getUsers(status, role, pageable);
 
-        return ApiResponse.success(
-                users.getContent(),
-                PageMeta.from(users)
-        );
-    }
+		return ApiResponse.success(users.getContent(), PageMeta.from(users));
+	}
 
-    // 신규 사용자를 등록한다.
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<UserResponse> createUser(
-            @Valid @RequestBody UserCreateRequest request,
-            Authentication authentication) {
+	// ========== 신규 사용자를 등록하는 메서드 ==========
+	@PostMapping
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request,
+			Authentication authentication) {
 
-        AppUserDetails currentUser =
-                (AppUserDetails) authentication.getPrincipal();
+		AppUserDetails currentUser = (AppUserDetails) authentication.getPrincipal();
 
-        return ApiResponse.success(
-                userService.createUser(
-                        request,
-                        currentUser.getUserId())
-        );
-    }
+		return ApiResponse.success(userService.createUser(request, currentUser.getUserId()));
+	}
 
-    // 사용자명과 역할을 수정한다.
-    @PatchMapping("/{userId}")
-    public ApiResponse<UserResponse> updateUser(
-            @PathVariable(name = "userId") Long userId,
-            @Valid @RequestBody UserUpdateRequest request,
-            Authentication authentication) {
+	// ========== 사용자명과 역할을 수정하는 메서드 ==========
+	@PatchMapping("/{userId}")
+	public ApiResponse<UserResponse> updateUser(@PathVariable(name = "userId") Long userId,
+			@Valid @RequestBody UserUpdateRequest request, Authentication authentication) {
 
-        AppUserDetails currentUser =
-                (AppUserDetails) authentication.getPrincipal();
+		AppUserDetails currentUser = (AppUserDetails) authentication.getPrincipal();
 
-        return ApiResponse.success(
-                userService.updateUser(
-                        userId,
-                        request,
-                        currentUser.getUserId())
-        );
-    }
+		return ApiResponse.success(userService.updateUser(userId, request, currentUser.getUserId()));
+	}
 
-    // 사용자 ACTIVE / INACTIVE 상태를 변경한다.
-    @PostMapping("/{userId}/status")
-    public ApiResponse<UserResponse> changeStatus(
-            @PathVariable(name = "userId") Long userId,
-            @Valid @RequestBody UserStatusRequest request,
-            Authentication authentication) {
+	// ========== 사용자 ACTIVE·INACTIVE 상태를 변경하는 메서드 ==========
+	@PostMapping("/{userId}/status")
+	public ApiResponse<UserResponse> changeStatus(@PathVariable(name = "userId") Long userId,
+			@Valid @RequestBody UserStatusRequest request, Authentication authentication) {
 
-        AppUserDetails currentUser =
-                (AppUserDetails) authentication.getPrincipal();
+		AppUserDetails currentUser = (AppUserDetails) authentication.getPrincipal();
 
-        return ApiResponse.success(
-                userService.changeStatus(
-                        userId,
-                        request,
-                        currentUser.getUserId())
-        );
-    }
+		return ApiResponse.success(userService.changeStatus(userId, request, currentUser.getUserId()));
+	}
 
-    // 사용자 비밀번호를 초기화한다.
-    @PatchMapping("/{userId}/password")
-    public ApiResponse<UserResponse> resetPassword(
-            @PathVariable(name = "userId") Long userId,
-            @Valid @RequestBody UserPasswordResetRequest request,
-            Authentication authentication) {
+	// ========== 사용자 비밀번호를 초기화하는 메서드 ==========
+	@PatchMapping("/{userId}/password")
+	public ApiResponse<UserResponse> resetPassword(@PathVariable(name = "userId") Long userId,
+			@Valid @RequestBody UserPasswordResetRequest request, Authentication authentication) {
 
-        AppUserDetails currentUser =
-                (AppUserDetails) authentication.getPrincipal();
+		AppUserDetails currentUser = (AppUserDetails) authentication.getPrincipal();
 
-        return ApiResponse.success(
-                userService.resetPassword(
-                        userId,
-                        request,
-                        currentUser.getUserId())
-        );
-    }
+		return ApiResponse.success(userService.resetPassword(userId, request, currentUser.getUserId()));
+	}
 }
