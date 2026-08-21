@@ -17,35 +17,37 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import tools.jackson.databind.json.JsonMapper;
 
-// 인증된 사용자의 권한이 부족하거나 CSRF 검증에 실패하여 접근이 거부된 경우 403 / FORBIDDEN 공통 오류 응답을 반환하기 위한 접근 거부 오류 처리 클래스
-
+// ********** 인증된 사용자의 권한이 부족하거나 CSRF 검증에 실패하여 접근이 거부된 경우 403 / FORBIDDEN 공통 오류 응답을 반환하기 위한 접근 거부 오류 처리 클래스 **********
+// AccessDeniedHandler를 구현했기 때문에 접근 거부가 발생하면 Spring Security가 handle()을 호출한다.
 @Component
 public class RestAccessDeniedHandler implements AccessDeniedHandler {
 
-    private final JsonMapper jsonMapper;
+	// ErrorResponse 객체를 JSON으로 변환하여 응답 Body에 작성하기 위한 JsonMapper 객체
+	private final JsonMapper jsonMapper;
 
-    public RestAccessDeniedHandler(JsonMapper jsonMapper) {
-        this.jsonMapper = jsonMapper;
-    }
+	// ========== JSON 응답 변환에 사용할 JsonMapper를 주입받는 생성자 ==========
+	public RestAccessDeniedHandler(JsonMapper jsonMapper) {
+		this.jsonMapper = jsonMapper;
+	}
 
-    // ********** 403이 발생했을 때 실행될 메서드 **********
-    // request: 접근이 거부된 요청, response: 클라이언트에 보낼 응답, accessDeniedException: 접근이 거부된 원인 예외
-    @Override
-    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException)
-            throws IOException, ServletException {
+	// ========== 접근이 거부된 요청을 403 공통 오류 응답으로 작성하는 메서드 ==========
+	// AccessDeniedHandler에 선언된 handle()을 구현한다.
+	@Override
+	public void handle(HttpServletRequest request, HttpServletResponse response,
+			AccessDeniedException accessDeniedException) throws IOException, ServletException {
 
-        ErrorCode errorCode = ErrorCode.FORBIDDEN;
+		ErrorCode errorCode = ErrorCode.FORBIDDEN;
 
-        // 기존 ErrorResponse 형식으로 403 오류 응답 생성
-        ErrorResponse errorResponse = ErrorResponse.of(errorCode.getCode(), errorCode.getMessage(),
-                MDC.get(TraceIdFilter.TRACE_ID_KEY));
+		// ErrorCode와 현재 Thread의 MDC에 저장된 traceId로 공통 오류 응답 객체를 만든다.
+		ErrorResponse errorResponse = ErrorResponse.of(errorCode.getCode(), errorCode.getMessage(),
+				MDC.get(TraceIdFilter.TRACE_ID_KEY));
 
-        // HTTP 상태와 응답 형식 설정
-        response.setStatus(errorCode.getHttpStatus().value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
+		// Controller를 거치지 않으므로 HttpServletResponse에 HTTP 상태와 응답 형식을 직접 설정한다.
+		response.setStatus(errorCode.getHttpStatus().value());
+		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+		response.setCharacterEncoding("UTF-8");
 
-        // ErrorResponse 객체를 JSON으로 변환하여 응답 body 에 작성
-        jsonMapper.writeValue(response.getOutputStream(),errorResponse);
-    }
+		// JsonMapper.writeValue()가 ErrorResponse를 JSON으로 변환하여 응답 출력 Stream에 작성한다.
+		jsonMapper.writeValue(response.getOutputStream(), errorResponse);
+	}
 }
