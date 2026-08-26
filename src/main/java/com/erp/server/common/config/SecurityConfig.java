@@ -3,6 +3,7 @@ package com.erp.server.common.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -26,8 +27,7 @@ import com.erp.server.common.security.RestAuthenticationEntryPoint;
 @EnableWebSecurity
 public class SecurityConfig {
 
-	// ========== API 요청에 적용할 SecurityFilterChain을 생성하여 Spring Bean으로 등록하는 메서드
-	// ==========
+	// ========== API 요청에 적용할 SecurityFilterChain을 생성하여 Spring Bean으로 등록하는 메서드 ==========
 	@Bean
 	@Order(1)
 	public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -42,6 +42,18 @@ public class SecurityConfig {
 				.authorizeHttpRequests(authorize -> authorize
 						// CSRF 발급과 로그인은 비로그인 사용자도 호출할 수 있다.
 						.requestMatchers("/api/v1/auth/csrf", "/api/v1/auth/login").permitAll()
+						
+						// 거래처 등록 API는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/customers").hasAnyRole("ADMIN", "OFFICE")
+						
+						// 거래처 기본정보 수정 API는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.PATCH, "/api/v1/customers/*").hasAnyRole("ADMIN", "OFFICE")
+						
+						// 거래처 사용 상태 변경 API는 ADMIN 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/customers/*/status").hasRole("ADMIN")
+						
+						// 거래처 거래 상태 변경 API는 ADMIN 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/customers/*/trade-status").hasRole("ADMIN")
 
 						// 사용자 관리 API는 ROLE_ADMIN 권한만 허용한다.
 						.requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
@@ -78,7 +90,7 @@ public class SecurityConfig {
 		return new BCryptPasswordEncoder();
 	}
 
-	// ========== DB 사용자 조회와 비밀번호 검증을 수행할 AuthenticationManager를 Spring Bean으로 등록하는 ==========
+	// ========== DB 사용자 조회와 비밀번호 검증을 수행할 AuthenticationManager를 Spring Bean으로 등록하는 메서드 ==========
 	@Bean
 	public AuthenticationManager authenticationManager(AppUserDetailsService appUserDetailsService,
 			PasswordEncoder passwordEncoder) {
@@ -90,7 +102,7 @@ public class SecurityConfig {
 		return new ProviderManager(authenticationProvider);
 	}
 
-	// ========== CSRF 토큰을 HTTP Session에 저장할 CsrfTokenRepository를 Spring Bean으로 등록하는 ==========
+	// ========== CSRF 토큰을 HTTP Session에 저장할 CsrfTokenRepository를 Spring Bean으로 등록하는 메서드 ==========
 	@Bean
 	public CsrfTokenRepository csrfTokenRepository() {
 		return new HttpSessionCsrfTokenRepository();
