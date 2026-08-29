@@ -40,15 +40,16 @@ public class SupplierController {
 
 	private final SupplierService supplierService;
 
-	// ========== 키워드·사용 상태 조건을 적용하여 공급업체 목록을 조회하는 메서드 ==========
-	// keyword와 status는 선택 조건이며, itemId 조건은 ITEM·SUPPLIER_ITEM 구현 후 추가한다.
+	// ========== 키워드·사용 상태·취급 품목 조건을 적용하여 공급업체 목록을 조회하는 메서드 ==========
+	// keyword, status, itemId는 선택 조건이다.
 	@GetMapping
 	public ApiResponse<List<SupplierListResponse>> getSuppliers(
 			@RequestParam(name = "keyword", required = false) String keyword,
 			@RequestParam(name = "status", required = false) MasterStatus status,
+			@RequestParam(name = "itemId", required = false) Long itemId,
 			@PageableDefault(size = 20, sort = "supplierId", direction = Sort.Direction.DESC) Pageable pageable) {
 
-		Page<SupplierListResponse> suppliers = supplierService.getSuppliers(keyword, status, pageable);
+		Page<SupplierListResponse> suppliers = supplierService.getSuppliers(keyword, status, itemId, pageable);
 
 		return ApiResponse.success(suppliers.getContent(), PageMeta.from(suppliers));
 	}

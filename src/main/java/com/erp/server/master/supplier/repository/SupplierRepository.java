@@ -14,11 +14,11 @@ import com.erp.server.master.supplier.domain.Supplier;
 
 import jakarta.persistence.LockModeType;
 
-// ********** SUPPLIER의 기본 CRUD와 키워드·사용 상태 조건을 적용한 공급업체 목록 조회를 처리하기 위한 Repository interface **********
+// ********** SUPPLIER의 기본 CRUD와 키워드·사용 상태·취급 품목 조건을 적용한 공급업체 목록 조회를 처리하기 위한 Repository interface **********
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 
-	// ========== 공급업체 코드·공급업체명·대표 연락처·발주 이메일과 사용 상태를 조건으로 공급업체 목록을 페이지 조회하는 메서드 ==========
-	// keyword는 앞뒤 공백을 제거한 검색어이며, phoneKeyword는 숫자만 남긴 검색어 또는 null을 전달한다.
+	// ========== 공급업체 코드·공급업체명·대표 연락처·발주 이메일과 사용 상태·취급 품목을 조건으로 공급업체 목록을 페이지 조회하는 메서드 ==========
+	// keyword는 앞뒤 공백을 제거한 검색어이고 phoneKeyword는 숫자만 남긴 검색어이며, itemId는 SUPPLIER_ITEM 관계가 존재하는 공급업체만 조회할 때 전달한다.
 	@Query("""
 			select s
 			from Supplier s
@@ -34,10 +34,19 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 			    )
 			)
 			  and (:status is null or s.status = :status)
+			  and (
+			      :itemId is null
+			      or exists (
+			          select si.supplierItemId
+			          from SupplierItem si
+			          where si.supplier = s
+			            and si.item.itemId = :itemId
+			      )
+			  )
 			""")
 	Page<Supplier> findAllByFilters(@Param("keyword") String keyword,
 			@Param("phoneKeyword") String phoneKeyword, @Param("status") MasterStatus status,
-			Pageable pageable);
+			@Param("itemId") Long itemId, Pageable pageable);
 
 	// ========== 공급업체 상태 변경과 최신 상태 검증 중 동시 처리를 막기 위해 PESSIMISTIC_WRITE 비관적 잠금으로 조회하는 메서드 ==========
 	// 먼저 잠금을 얻은 트랜잭션이 끝날 때까지 같은 공급업체를 잠금 조회하는 다른 요청은 대기한다.

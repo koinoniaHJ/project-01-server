@@ -64,6 +64,21 @@ public class SecurityConfig {
 						// 공급업체 사용 상태 변경 API는 ADMIN 권한만 허용한다.
 						.requestMatchers(HttpMethod.POST, "/api/v1/suppliers/*/status").hasRole("ADMIN")
 
+						// 품목 등록 API는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/items").hasAnyRole("ADMIN", "OFFICE")
+
+						// 품목 기본정보 수정 API는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.PATCH, "/api/v1/items/*").hasAnyRole("ADMIN", "OFFICE")
+
+						// 품목 사용 상태 변경 API는 ADMIN 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/items/*/status").hasRole("ADMIN")
+
+						// 품목 취급 공급업체 등록 API는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/items/*/suppliers").hasAnyRole("ADMIN", "OFFICE")
+
+						// 품목 취급 공급업체 관계 해제 API는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.DELETE, "/api/v1/items/*/suppliers/*").hasAnyRole("ADMIN", "OFFICE")
+
 						// 사용자 관리 API는 ROLE_ADMIN 권한만 허용한다.
 						.requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
 

@@ -24,7 +24,7 @@ import com.erp.server.master.supplier.repository.SupplierRepository;
 
 import lombok.RequiredArgsConstructor;
 
-// ********** 공급업체 목록 조회와 공급업체 관련 업무 규칙을 처리하기 위한 Service 클래스 **********
+// ********** 공급업체 목록 조건 조회와 공급업체 관련 업무 규칙을 처리하기 위한 Service 클래스 **********
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -33,13 +33,14 @@ public class SupplierService {
 	private final AppUserRepository appUserRepository;
 	private final SupplierRepository supplierRepository;
 
-	// ========== 키워드·사용 상태 조건을 적용하여 공급업체 목록을 페이지 조회하는 메서드 ==========
-	public Page<SupplierListResponse> getSuppliers(String keyword, MasterStatus status, Pageable pageable) {
+	// ========== 키워드·사용 상태·취급 품목 조건을 적용하여 공급업체 목록을 페이지 조회하는 메서드 ==========
+	public Page<SupplierListResponse> getSuppliers(String keyword, MasterStatus status, Long itemId,
+			Pageable pageable) {
 
 		String normalizedKeyword = normalizeKeyword(keyword);
 		String phoneKeyword = extractPhoneKeyword(normalizedKeyword);
 
-		return supplierRepository.findAllByFilters(normalizedKeyword, phoneKeyword, status, pageable)
+		return supplierRepository.findAllByFilters(normalizedKeyword, phoneKeyword, status, itemId, pageable)
 				.map(SupplierListResponse::from);
 	}
 
