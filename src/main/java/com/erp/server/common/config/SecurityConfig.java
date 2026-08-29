@@ -55,6 +55,15 @@ public class SecurityConfig {
 						// 거래처 거래 상태 변경 API는 ADMIN 권한만 허용한다.
 						.requestMatchers(HttpMethod.POST, "/api/v1/customers/*/trade-status").hasRole("ADMIN")
 
+						// 공급업체 등록 API는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/suppliers").hasAnyRole("ADMIN", "OFFICE")
+
+						// 공급업체 기본정보 수정 API는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.PATCH, "/api/v1/suppliers/*").hasAnyRole("ADMIN", "OFFICE")
+
+						// 공급업체 사용 상태 변경 API는 ADMIN 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/suppliers/*/status").hasRole("ADMIN")
+
 						// 사용자 관리 API는 ROLE_ADMIN 권한만 허용한다.
 						.requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
 
