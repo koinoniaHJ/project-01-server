@@ -18,7 +18,8 @@ import jakarta.persistence.LockModeType;
 public interface ItemRepository extends JpaRepository<Item, Long> {
 
 	// ========== 품목 코드·품목명과 사용 상태·취급 공급업체를 조건으로 품목 목록을 페이지 조회하는 메서드 ==========
-	// keyword는 앞뒤 공백을 제거한 검색어이며, supplierId는 SUPPLIER_ITEM 관계가 존재하는 품목만 조회할 때 전달한다.
+	// keyword는 앞뒤 공백을 제거한 후 품목 코드와 품목명을 대소문자 구분 없이 부분 검색한다.
+	// supplierId는 SUPPLIER_ITEM 관계가 존재하는 품목만 조회하며 keyword, status와 함께 전달되면 모든 조건을 적용한다.
 	@Query("""
 			select i
 			from Item i
