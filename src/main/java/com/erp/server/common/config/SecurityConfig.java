@@ -88,6 +88,9 @@ public class SecurityConfig {
 						// 창고 사용 상태 변경 API는 ADMIN 권한만 허용한다.
 						.requestMatchers(HttpMethod.POST, "/api/v1/warehouses/*/status").hasRole("ADMIN")
 
+						// 창고·품목별 안전재고 등록·변경 API는 ADMIN 권한만 허용한다.
+						.requestMatchers(HttpMethod.PUT, "/api/v1/warehouse-items/*/*").hasRole("ADMIN")
+
 						// 사용자 관리 API는 ROLE_ADMIN 권한만 허용한다.
 						.requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
 
