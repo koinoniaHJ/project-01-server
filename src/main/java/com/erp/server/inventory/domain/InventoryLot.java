@@ -67,7 +67,7 @@ public class InventoryLot {
 	private String supplierLotNumber;
 
 	// 공급업체 LOT가 없어 시스템에서 내부 LOT 번호를 생성했는지 Y 또는 N으로 저장한다.
-	@Column(name = "internal_lot_yn", nullable = false, length = 1)
+	@Column(name = "internal_lot_yn", nullable = false, length = 1, columnDefinition = "CHAR(1)")
 	private String internalLotYn;
 
 	// LOT를 출고에 사용할 수 있는 마지막 날짜를 저장하고 현재 날짜와 비교하여 사용기한 경과 여부를 판단한다.

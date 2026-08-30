@@ -106,6 +106,22 @@ public class PurchaseOrderItem {
 		return purchaseOrderItem;
 	}
 
+	// ========== 검수 완료된 정상 입고 수량을 누적하고 발주 수량을 초과하지 않는 최신 값을 저장하는 메서드 ==========
+	public void addReceivedQuantity(BigDecimal quantity) {
+		BigDecimal nextReceivedQuantity = receivedQuantity.add(quantity);
+
+		if (nextReceivedQuantity.compareTo(orderedQuantity) > 0) {
+			throw new IllegalArgumentException("누적 정상 입고 수량은 발주 수량을 초과할 수 없습니다.");
+		}
+
+		this.receivedQuantity = nextReceivedQuantity;
+	}
+
+	// ========== 발주 수량에서 누적 정상 입고 수량을 차감하여 최신 잔여 수량을 계산하는 메서드 ==========
+	public BigDecimal calculateRemainingQuantity() {
+		return orderedQuantity.subtract(receivedQuantity);
+	}
+
 	// ========== 발주 수량과 단가를 곱하고 DB 제약조건과 같은 소수 둘째 자리 금액으로 반올림하는 메서드 ==========
 	private static BigDecimal calculateLineAmount(BigDecimal orderedQuantity, BigDecimal unitPrice) {
 		return orderedQuantity.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP);

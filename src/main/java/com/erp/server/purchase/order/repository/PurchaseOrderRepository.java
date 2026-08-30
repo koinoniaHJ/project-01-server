@@ -112,6 +112,29 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
 			""", nativeQuery = true)
 	long countCancellationBlockingReferences(@Param("purchaseOrderId") Long purchaseOrderId);
 
+	// ========== 전량 불합격 검수 완료와 발주 취소를 함께 처리할 때 현재 입고를 제외한 취소 차단 참조를 조회하는 메서드 ==========
+	// 현재 INSPECTING 입고는 같은 트랜잭션에서 COMPLETED로 전환하므로 제외하고, 다른 진행 입고와 기존 정상 입고 누계만 검사한다.
+	@Query(value = """
+			SELECT
+			    (
+			        SELECT COUNT(*)
+			        FROM PURCHASE_ORDER_ITEM purchase_order_item
+			        WHERE purchase_order_item.purchase_order_id = :purchaseOrderId
+			          AND purchase_order_item.received_quantity > 0
+			    )
+			    +
+			    (
+			        SELECT COUNT(*)
+			        FROM RECEIPT receipt
+			        WHERE receipt.purchase_order_id = :purchaseOrderId
+			          AND receipt.receipt_id <> :excludedReceiptId
+			          AND receipt.status IN ('PENDING', 'INSPECTING')
+			    )
+			FROM DUAL
+			""", nativeQuery = true)
+	long countCancellationBlockingReferencesExcludingReceipt(@Param("purchaseOrderId") Long purchaseOrderId,
+			@Param("excludedReceiptId") Long excludedReceiptId);
+
 	// ========== 목록 집계 Query 결과를 Entity 전체 조회 없이 필요한 필드만 전달하기 위한 Projection interface ==========
 	interface PurchaseOrderListProjection {
 		Long getPurchaseOrderId();

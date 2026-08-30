@@ -243,6 +243,19 @@ public class PurchaseOrder {
 		}
 	}
 
+	// ========== 모든 발주 품목이 전량 정상 입고되었을 때 ORDERED 발주를 RECEIVED 상태로 변경하는 메서드 ==========
+	public void completeReceipt() {
+		this.status = PurchaseOrderStatus.RECEIVED;
+	}
+
+	// ========== 일부 정상 입고 후 잔여 미입고 수량을 종료하고 발주를 CLOSED 상태로 변경하는 메서드 ==========
+	public void closeRemainder(AppUser closedBy, String closeReason) {
+		this.status = PurchaseOrderStatus.CLOSED;
+		this.closedBy = closedBy;
+		this.closedAt = LocalDateTime.now();
+		this.closeReason = closeReason;
+	}
+
 	// ========== 모든 발주 품목 금액의 합계를 발주 총액으로 저장하는 메서드 ==========
 	private void recalculateTotalAmount() {
 		totalAmount = items.stream().map(PurchaseOrderItem::getLineAmount)

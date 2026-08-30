@@ -108,6 +108,15 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.GET, "/api/v1/purchase-orders/*/email-history")
 								.hasAnyRole("ADMIN", "OFFICE")
 
+						// 입고 등록·창고 수정·검수 시작·저장·완료·취소 API는 ADMIN과 WAREHOUSE 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/receipts",
+								"/api/v1/receipts/*/start-inspection", "/api/v1/receipts/*/complete",
+								"/api/v1/receipts/*/cancel").hasAnyRole("ADMIN", "WAREHOUSE")
+						.requestMatchers(HttpMethod.PATCH, "/api/v1/receipts/*")
+								.hasAnyRole("ADMIN", "WAREHOUSE")
+						.requestMatchers(HttpMethod.PUT, "/api/v1/receipts/*/inspection")
+								.hasAnyRole("ADMIN", "WAREHOUSE")
+
 						// 사용자 관리 API는 ROLE_ADMIN 권한만 허용한다.
 						.requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
 
