@@ -208,4 +208,11 @@ public class Customer {
 		this.tradeStatus = tradeStatus;
 		this.updatedBy = updatedBy;
 	}
+
+	// ========== 매출 전표별 최신 미수 잔액 합계로 거래처 총미수금을 갱신하는 메서드 ==========
+	// 총미수금은 거래처 관리에서 직접 입력하지 않고 전표 생성·반품·입금 배분·취소 결과에 따라 정산 Service에서만 변경한다.
+	public void updateTotalReceivableAmount(BigDecimal totalReceivableAmount, AppUser updatedBy) {
+		this.totalReceivableAmount = totalReceivableAmount;
+		this.updatedBy = updatedBy;
+	}
 }
