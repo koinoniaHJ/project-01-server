@@ -91,6 +91,23 @@ public class SecurityConfig {
 						// 창고·품목별 안전재고 등록·변경 API는 ADMIN 권한만 허용한다.
 						.requestMatchers(HttpMethod.PUT, "/api/v1/warehouse-items/*/*").hasRole("ADMIN")
 
+						// 발주 등록·수정·삭제 API는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/purchase-orders").hasAnyRole("ADMIN", "OFFICE")
+						.requestMatchers(HttpMethod.PATCH, "/api/v1/purchase-orders/*").hasAnyRole("ADMIN", "OFFICE")
+						.requestMatchers(HttpMethod.DELETE, "/api/v1/purchase-orders/*").hasAnyRole("ADMIN", "OFFICE")
+
+						// 발주 승인은 ADMIN 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/purchase-orders/*/approve").hasRole("ADMIN")
+
+						// 승인 요청·발주 확정·이메일 재전송·발주 취소는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/purchase-orders/*/submit",
+								"/api/v1/purchase-orders/*/order", "/api/v1/purchase-orders/*/email/resend",
+								"/api/v1/purchase-orders/*/cancel").hasAnyRole("ADMIN", "OFFICE")
+
+						// 발주 이메일 전송 이력은 단가·금액·이메일 정보 접근이 가능한 ADMIN과 OFFICE만 조회한다.
+						.requestMatchers(HttpMethod.GET, "/api/v1/purchase-orders/*/email-history")
+								.hasAnyRole("ADMIN", "OFFICE")
+
 						// 사용자 관리 API는 ROLE_ADMIN 권한만 허용한다.
 						.requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
 

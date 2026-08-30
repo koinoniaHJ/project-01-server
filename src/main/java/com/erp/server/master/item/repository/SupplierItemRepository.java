@@ -26,6 +26,16 @@ public interface SupplierItemRepository extends JpaRepository<SupplierItem, Long
 	// ========== 동일한 품목과 공급업체의 취급 관계가 이미 존재하는지 확인하는 메서드 ==========
 	boolean existsByItemItemIdAndSupplierSupplierId(Long itemId, Long supplierId);
 
+	// ========== 지정한 공급업체가 발주 대상 품목 전체를 취급하는지 한 번의 Query로 검증하기 위한 관계 건수 조회 메서드 ==========
+	@Query("""
+			select count(si)
+			from SupplierItem si
+			where si.supplier.supplierId = :supplierId
+			  and si.item.itemId in :itemIds
+			""")
+	long countBySupplierIdAndItemIds(@Param("supplierId") Long supplierId,
+			@Param("itemIds") List<Long> itemIds);
+
 	// ========== 품목과 공급업체 식별자로 관계 해제 대상 SUPPLIER_ITEM을 조회하는 메서드 ==========
 	Optional<SupplierItem> findByItemItemIdAndSupplierSupplierId(Long itemId, Long supplierId);
 }

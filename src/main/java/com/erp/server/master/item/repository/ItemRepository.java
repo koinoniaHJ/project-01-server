@@ -1,5 +1,6 @@
 package com.erp.server.master.item.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -52,6 +53,17 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
 			where i.itemId = :itemId
 			""")
 	Optional<Item> findByIdForUpdate(@Param("itemId") Long itemId);
+
+	// ========== 발주 저장·승인 요청·확정 검증 중 대상 품목들의 상태 변경을 막기 위해 식별자 순서로 비관적 잠금 조회하는 메서드 ==========
+	// 여러 품목을 항상 itemId 오름차순으로 잠가 서로 다른 발주 요청 사이의 교착 가능성을 줄인다.
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select i
+			from Item i
+			where i.itemId in :itemIds
+			order by i.itemId asc
+			""")
+	List<Item> findAllByIdsForUpdate(@Param("itemIds") List<Long> itemIds);
 
 	// ========== Oracle의 품목 업무 코드 Sequence를 이용하여 ITM + 6자리 형식의 다음 품목 코드를 생성하는 메서드 ==========
 	// 실제 PK용 SEQ_ITEM과 업무 코드용 SEQ_ITEM_CODE를 분리한다.
