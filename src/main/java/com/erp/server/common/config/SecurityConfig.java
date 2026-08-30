@@ -117,6 +117,16 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.PUT, "/api/v1/receipts/*/inspection")
 								.hasAnyRole("ADMIN", "WAREHOUSE")
 
+						// 매입 반품 등록·수정은 공급업체 구매 업무를 담당하는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/purchase-returns")
+								.hasAnyRole("ADMIN", "OFFICE")
+						.requestMatchers(HttpMethod.PATCH, "/api/v1/purchase-returns/*")
+								.hasAnyRole("ADMIN", "OFFICE")
+
+						// 매입 반품 완료·취소는 실제 재고를 처리하는 ADMIN과 WAREHOUSE 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/purchase-returns/*/complete",
+								"/api/v1/purchase-returns/*/cancel").hasAnyRole("ADMIN", "WAREHOUSE")
+
 						// 사용자 관리 API는 ROLE_ADMIN 권한만 허용한다.
 						.requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
 
