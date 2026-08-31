@@ -3,6 +3,7 @@ package com.erp.server.inventory.repository;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
 
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,11 +12,30 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.erp.server.inventory.domain.InventoryLot;
+import com.erp.server.inventory.domain.InventoryLotStatus;
 
 import jakarta.persistence.LockModeType;
 
 // ********** INVENTORY_LOT의 기본 CRUD와 일반 조회·비관적 잠금·실사/조정 제한 조회를 처리하기 위한 Repository interface **********
 public interface InventoryLotRepository extends JpaRepository<InventoryLot, Long> {
+
+	// ========== 창고·품목·LOT 상태·사용기한 조건으로 재고 LOT와 기준정보를 조회하는 메서드 ==========
+	// API-INV-001은 주문 작성 중 품목별 창고 가용재고를 확인할 때도 사용하며 창고 코드·품목 코드·사용기한·LOT 식별자 순으로 고정한다.
+	@EntityGraph(attributePaths = { "warehouse", "item", "supplier" })
+	@Query("""
+			select inventoryLot
+			from InventoryLot inventoryLot
+			where (:warehouseId is null or inventoryLot.warehouse.warehouseId = :warehouseId)
+			  and (:itemId is null or inventoryLot.item.itemId = :itemId)
+			  and (:status is null or inventoryLot.status = :status)
+			  and (:expiry is null or inventoryLot.expiryDate = :expiry)
+			order by inventoryLot.warehouse.warehouseCode asc,
+			         inventoryLot.item.itemCode asc,
+			         inventoryLot.expiryDate asc,
+			         inventoryLot.inventoryLotId asc
+			""")
+	List<InventoryLot> findAllByFilters(@Param("warehouseId") Long warehouseId, @Param("itemId") Long itemId,
+			@Param("status") InventoryLotStatus status, @Param("expiry") LocalDate expiry);
 
 	// ========== inventoryLotId로 재고 LOT와 창고·품목·공급업체 정보를 함께 일반 조회하는 메서드 ==========
 	// 수량을 변경하지 않는 재고 현황·LOT 상세 조회에서 지연 로딩 추가 조회를 줄이기 위해 사용한다.

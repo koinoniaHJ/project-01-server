@@ -15,6 +15,8 @@ import com.erp.server.common.user.domain.AppUser;
 import com.erp.server.inventory.domain.InventoryLot;
 import com.erp.server.inventory.domain.StockMovement;
 import com.erp.server.inventory.domain.StockMovementType;
+import com.erp.server.inventory.domain.InventoryLotStatus;
+import com.erp.server.inventory.dto.InventoryLotListResponse;
 import com.erp.server.inventory.repository.InventoryLotRepository;
 import com.erp.server.inventory.repository.StockMovementRepository;
 
@@ -30,6 +32,34 @@ public class InventoryService {
 
 	private final InventoryLotRepository inventoryLotRepository;
 	private final StockMovementRepository stockMovementRepository;
+
+	// ========== 창고·품목·상태·사용기한 조건으로 LOT별 현재·예약·가용 수량을 조회하는 메서드 ==========
+	// 주문 작성 화면은 itemId로 조회한 출고 가능 수량을 창고별로 합산하며 이 조회만으로 재고를 예약하지 않는다.
+	public List<InventoryLotListResponse> getInventoryLots(Long warehouseId, Long itemId,
+			InventoryLotStatus status, LocalDate expiry) {
+		return inventoryLotRepository.findAllByFilters(warehouseId, itemId, status, expiry).stream()
+				.map(this::createInventoryLotListResponse).toList();
+	}
+
+	// ========== LOT 상태·사용기한·실사/조정 제한을 반영하여 조회 응답의 실제 출고 가능 수량을 계산하는 메서드 ==========
+	private InventoryLotListResponse createInventoryLotListResponse(InventoryLot inventoryLot) {
+		boolean expired = inventoryLot.isExpired(LocalDate.now());
+		boolean restricted = inventoryLotRepository.countUnreleasedRestrictions(inventoryLot.getInventoryLotId()) > 0;
+		BigDecimal availableQuantity = inventoryLot.calculateAvailableQuantity();
+		boolean outboundAvailable = inventoryLot.isAvailableStatus() && !expired && !restricted
+				&& availableQuantity.compareTo(BigDecimal.ZERO) > 0;
+
+		return new InventoryLotListResponse(inventoryLot.getInventoryLotId(),
+				inventoryLot.getWarehouse().getWarehouseId(), inventoryLot.getWarehouse().getWarehouseCode(),
+				inventoryLot.getWarehouse().getWarehouseName(), inventoryLot.getItem().getItemId(),
+				inventoryLot.getItem().getItemCode(), inventoryLot.getItem().getItemName(),
+				inventoryLot.getSupplier().getSupplierId(), inventoryLot.getSupplier().getSupplierCode(),
+				inventoryLot.getSupplier().getSupplierName(), inventoryLot.getLotNumber(),
+				inventoryLot.getSupplierLotNumber(), inventoryLot.isInternalLot(), inventoryLot.getExpiryDate(),
+				inventoryLot.getStatus(), inventoryLot.getCurrentQuantity(), inventoryLot.getReservedQuantity(),
+				availableQuantity, expired, restricted, outboundAvailable,
+				outboundAvailable ? availableQuantity : BigDecimal.ZERO, inventoryLot.getVersion());
+	}
 
 	// ========== inventoryLotId로 재고 LOT와 기본정보를 일반 조회하는 메서드 ==========
 	public InventoryLot getInventoryLot(Long inventoryLotId) {

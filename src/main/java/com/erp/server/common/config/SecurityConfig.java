@@ -127,6 +127,15 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, "/api/v1/purchase-returns/*/complete",
 								"/api/v1/purchase-returns/*/cancel").hasAnyRole("ADMIN", "WAREHOUSE")
 
+						// 주문 등록·수정·삭제·접수·취소 API는 판매 업무를 담당하는 ADMIN과 OFFICE 권한만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/sales-orders",
+								"/api/v1/sales-orders/*/register", "/api/v1/sales-orders/*/cancel")
+								.hasAnyRole("ADMIN", "OFFICE")
+						.requestMatchers(HttpMethod.PATCH, "/api/v1/sales-orders/*")
+								.hasAnyRole("ADMIN", "OFFICE")
+						.requestMatchers(HttpMethod.DELETE, "/api/v1/sales-orders/*")
+								.hasAnyRole("ADMIN", "OFFICE")
+
 						// 사용자 관리 API는 ROLE_ADMIN 권한만 허용한다.
 						.requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
 
