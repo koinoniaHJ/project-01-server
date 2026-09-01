@@ -19,6 +19,24 @@ import jakarta.persistence.LockModeType;
 // ********** INVENTORY_LOT의 기본 CRUD와 일반 조회·비관적 잠금·실사/조정 제한 조회를 처리하기 위한 Repository interface **********
 public interface InventoryLotRepository extends JpaRepository<InventoryLot, Long> {
 
+	// ========== 출고 포장 화면에서 선택 창고·주문 품목의 최신 출고 가능 후보 LOT를 선입선출 순서로 조회하는 메서드 ==========
+	// 상태·사용기한·가용 수량을 먼저 거르고 실사/조정 제한은 InventoryService에서 LOT별로 최종 검증한다.
+	@EntityGraph(attributePaths = { "warehouse", "item", "supplier" })
+	@Query("""
+			select inventoryLot
+			from InventoryLot inventoryLot
+			where inventoryLot.warehouse.warehouseId = :warehouseId
+			  and inventoryLot.item.itemId in :itemIds
+			  and inventoryLot.status = :status
+			  and inventoryLot.expiryDate >= :currentDate
+			  and inventoryLot.currentQuantity > inventoryLot.reservedQuantity
+			order by inventoryLot.item.itemCode asc, inventoryLot.expiryDate asc,
+			         inventoryLot.createdAt asc, inventoryLot.inventoryLotId asc
+			""")
+	List<InventoryLot> findAvailableForShipment(@Param("warehouseId") Long warehouseId,
+			@Param("itemIds") Collection<Long> itemIds, @Param("status") InventoryLotStatus status,
+			@Param("currentDate") LocalDate currentDate);
+
 	// ========== 창고·품목·LOT 상태·사용기한 조건으로 재고 LOT와 기준정보를 조회하는 메서드 ==========
 	// API-INV-001은 주문 작성 중 품목별 창고 가용재고를 확인할 때도 사용하며 창고 코드·품목 코드·사용기한·LOT 식별자 순으로 고정한다.
 	@EntityGraph(attributePaths = { "warehouse", "item", "supplier" })

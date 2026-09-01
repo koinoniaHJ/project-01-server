@@ -75,7 +75,26 @@ public class ShipmentLot {
 		updatedAt = LocalDateTime.now();
 	}
 
-	// ========== 주문 취소 시 이미 반영된 재고 예약을 해제한 상태로 표시하는 메서드 ==========
+	// ========== PENDING 출고의 현재 포장안에 주문 품목·재고 LOT·포장 수량을 연결하는 정적 팩토리 메서드 ==========
+	// 포장안 저장 단계에는 재고를 예약하지 않으므로 reservedYn은 N으로 시작한다.
+	public static ShipmentLot create(Shipment shipment, SalesOrderItem salesOrderItem,
+			InventoryLot inventoryLot, BigDecimal packedQuantity) {
+		ShipmentLot shipmentLot = new ShipmentLot();
+		shipmentLot.shipment = shipment;
+		shipmentLot.salesOrderItem = salesOrderItem;
+		shipmentLot.inventoryLot = inventoryLot;
+		shipmentLot.packedQuantity = packedQuantity;
+		shipmentLot.reservedYn = "N";
+		return shipmentLot;
+	}
+
+	// ========== 포장 확정으로 포장 수량이 재고 LOT 예약에 반영된 상태와 일시를 기록하는 메서드 ==========
+	public void reserve() {
+		reservedYn = "Y";
+		reservedAt = LocalDateTime.now();
+	}
+
+	// ========== 주문 취소·포장 취소·실제 출고 완료로 재고 예약이 소멸한 상태를 표시하는 메서드 ==========
 	public void releaseReservation() {
 		reservedYn = "N";
 		reservedAt = null;

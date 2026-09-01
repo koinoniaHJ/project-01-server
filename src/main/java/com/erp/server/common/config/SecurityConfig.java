@@ -136,6 +136,15 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.DELETE, "/api/v1/sales-orders/*")
 								.hasAnyRole("ADMIN", "OFFICE")
 
+						// 출고 포장안 저장·포장 확정·포장 취소는 실제 포장 업무를 담당하는 ADMIN과 WAREHOUSE만 허용한다.
+						.requestMatchers(HttpMethod.PUT, "/api/v1/shipments/*/packing")
+								.hasAnyRole("ADMIN", "WAREHOUSE")
+						.requestMatchers(HttpMethod.POST, "/api/v1/shipments/*/pack",
+								"/api/v1/shipments/*/unpack").hasAnyRole("ADMIN", "WAREHOUSE")
+
+						// 실제 재고 인계·매출 전표·미수금까지 확정하는 출고 완료는 ADMIN만 허용한다.
+						.requestMatchers(HttpMethod.POST, "/api/v1/shipments/*/complete").hasRole("ADMIN")
+
 						// 사용자 관리 API는 ROLE_ADMIN 권한만 허용한다.
 						.requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
 

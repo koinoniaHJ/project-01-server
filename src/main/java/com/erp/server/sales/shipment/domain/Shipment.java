@@ -116,6 +116,36 @@ public class Shipment {
 		return shipment;
 	}
 
+	// ========== PENDING 출고의 단일 출고 창고를 지정하고 포장안 저장에 따른 version 변경을 발생시키는 메서드 ==========
+	// SHIPMENT_LOT에는 별도 version이 없으므로 같은 창고에서 LOT 배정만 바뀌어도 updatedAt을 명시적으로 변경한다.
+	public void savePackingPlan(Warehouse warehouse) {
+		this.warehouse = warehouse;
+		updatedAt = LocalDateTime.now();
+	}
+
+	// ========== PENDING 출고의 현재 포장안을 확정하고 포장 회차·처리자·처리 일시를 기록하는 메서드 ==========
+	public void pack(AppUser packedBy) {
+		status = ShipmentStatus.PACKED;
+		packingSequence += 1;
+		this.packedBy = packedBy;
+		packedAt = LocalDateTime.now();
+	}
+
+	// ========== PACKED 출고의 재고 예약을 해제한 뒤 다시 포장 가능한 PENDING 상태로 되돌리는 메서드 ==========
+	// 최근 배정안은 재포장 편의를 위해 SHIPMENT_LOT에 남기고 실제 예약 여부만 ShipmentLot에서 해제한다.
+	public void unpack() {
+		status = ShipmentStatus.PENDING;
+		packedBy = null;
+		packedAt = null;
+	}
+
+	// ========== PACKED 출고를 COMPLETED 상태로 변경하고 실제 인계 처리자와 완료 일시를 기록하는 메서드 ==========
+	public void complete(AppUser completedBy) {
+		status = ShipmentStatus.COMPLETED;
+		this.completedBy = completedBy;
+		completedAt = LocalDateTime.now();
+	}
+
 	// ========== PENDING 또는 PACKED 출고를 CANCELED 상태로 변경하고 처리 이력을 기록하는 메서드 ==========
 	public void cancel(AppUser canceledBy) {
 		status = ShipmentStatus.CANCELED;

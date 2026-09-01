@@ -125,6 +125,12 @@ public class InventoryService {
 		validateNoInventoryWorkRestriction(inventoryLot);
 	}
 
+	// ========== 출고 가능 LOT 목록에서 실사 또는 후속 재고 조정으로 제한된 LOT를 제외할 수 있도록 확인하는 메서드 ==========
+	// 실제 예약·출고 시에는 조회 결과와 관계없이 validateLotForOutbound로 잠금 후 다시 검증한다.
+	public boolean hasInventoryWorkRestriction(InventoryLot inventoryLot) {
+		return inventoryLotRepository.countUnreleasedRestrictions(inventoryLot.getInventoryLotId()) > 0;
+	}
+
 	// ========== 입고 검수 완료 수량을 현재 재고에 증가시키고 RECEIPT 변동 이력을 같은 트랜잭션으로 저장하는 메서드 ==========
 	@Transactional
 	public InventoryLot increaseFromReceipt(Long inventoryLotId, BigDecimal quantity, Long receiptLotId,

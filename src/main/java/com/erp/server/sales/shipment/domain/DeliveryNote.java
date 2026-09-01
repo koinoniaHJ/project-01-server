@@ -67,6 +67,17 @@ public class DeliveryNote {
 		issuedAt = issuedAt == null ? LocalDateTime.now() : issuedAt;
 	}
 
+	// ========== 포장 확정 회차와 처리자를 연결한 ACTIVE 납품서 발행 이력을 생성하는 정적 팩토리 메서드 ==========
+	public static DeliveryNote create(Shipment shipment, Integer issueSequence, AppUser issuedBy) {
+		DeliveryNote deliveryNote = new DeliveryNote();
+		deliveryNote.shipment = shipment;
+		deliveryNote.issueSequence = issueSequence;
+		deliveryNote.status = DeliveryNoteStatus.ACTIVE;
+		deliveryNote.issuedBy = issuedBy;
+		deliveryNote.issuedAt = LocalDateTime.now();
+		return deliveryNote;
+	}
+
 	// ========== PACKED 주문 취소 또는 포장 취소 시 현재 유효한 납품서를 VOID 상태로 변경하는 메서드 ==========
 	public void voidNote(AppUser voidedBy, String voidReason) {
 		status = DeliveryNoteStatus.VOID;
